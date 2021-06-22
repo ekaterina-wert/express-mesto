@@ -3,13 +3,13 @@ const mongoose = require('mongoose');
 // const path = require('path');
 // const bodyParser = require('body-parser');
 
-const { NOT_FOUND } = require('./utils/constants');
+const { MONGO_URL, NOT_FOUND } = require('./utils/constants');
 
 const { PORT = 3000 } = process.env;
 
 const app = express();
 
-mongoose.connect('mongodb://localhost:27017/mestodb', {
+mongoose.connect(MONGO_URL, {
   useNewUrlParser: true,
   useCreateIndex: true,
   useFindAndModify: false,
@@ -36,7 +36,4 @@ app.use('/cards', require('./routes/cards'));
 // Handling 404
 app.use((req, res) => res.status(NOT_FOUND).send({ message: 'Такой страницы не существует' }));
 
-app.listen(PORT, () => {
-  // Если всё работает, консоль покажет, какой порт приложение слушает
-  console.log(`App listening on port ${PORT}`);
-});
+app.listen(PORT);

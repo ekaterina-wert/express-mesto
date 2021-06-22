@@ -4,9 +4,14 @@ const {
 } = require('../utils/constants');
 
 const sendError = (req, res, err) => {
-  if (err.name === 'CastError') return res.status(NOT_FOUND).send({ message: 'Карточка с указанным _id не найдена' });
+  if (err.name === 'CastError') return res.status(BAD_REQUEST).send({ message: 'Передан некорректный id карточки' });
   if (err.name === 'ValidationError') return res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при создании карточки' });
   return res.status(SERVER_ERROR).send({ message: err.message });
+};
+
+const checkCardIfExists = (card, res) => {
+  if (card) res.status(OK).send(card);
+  res.status(NOT_FOUND).send({ message: 'Карточка с указанным _id не найдена' });
 };
 
 // Получить список карточек
@@ -28,7 +33,7 @@ const deleteCard = (req, res) => {
   const { cardId } = req.params;
 
   return Card.findByIdAndDelete(cardId)
-    .then(() => res.status(OK).send({ message: 'Карточка успешно удалена' }))
+    .then((card) => checkCardIfExists(card, res))
     .catch((err) => sendError(req, res, err));
 };
 
@@ -41,7 +46,7 @@ const likeCard = (req, res) => {
     { $addToSet: { likes: req.user._id } }, // добавить _id в массив, если его там нет
     { new: true },
   )
-    .then((card) => res.status(OK).send(card))
+    .then((card) => checkCardIfExists(card, res))
     .catch((err) => sendError(req, res, err));
 };
 
@@ -54,7 +59,7 @@ const unlikeCard = (req, res) => {
     { $pull: { likes: req.user._id } }, // убрать _id из массива
     { new: true },
   )
-    .then((card) => res.status(OK).send(card))
+    .then((card) => checkCardIfExists(card, res))
     .catch((err) => sendError(req, res, err));
 };
 

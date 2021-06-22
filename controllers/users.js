@@ -4,7 +4,7 @@ const {
 } = require('../utils/constants');
 
 const sendError = (req, res, err) => {
-  if (err.name === 'CastError') return res.status(NOT_FOUND).send({ message: 'Пользователь с указанным _id не найден' });
+  if (err.name === 'CastError') return res.status(BAD_REQUEST).send({ message: 'Передан некорректный id пользователя' });
   if (err.name === 'ValidationError') return res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при создании пользователя' });
   return res.status(SERVER_ERROR).send({ message: err.message });
 };
@@ -19,7 +19,10 @@ const getUser = (req, res) => {
   const { userId } = req.params;
 
   return User.findById(userId)
-    .then((user) => res.status(OK).send(user))
+    .then((user) => {
+      if (user) res.status(OK).send(user);
+      res.status(NOT_FOUND).send({ message: 'Пользователь с указанным _id не найден' });
+    })
     .catch((err) => sendError(req, res, err));
 };
 
