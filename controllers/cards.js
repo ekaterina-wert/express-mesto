@@ -1,37 +1,67 @@
 const Card = require('../models/card');
+const {
+  OK, BAD_REQUEST, NOT_FOUND, SERVER_ERROR,
+} = require('../utils/constants');
 
-getCards = (req, res) => {
-  return Card.find({})
-    .then(cards => res.status(200).send({ data: cards }))
-    .catch(err => res.status(500).send({ message: err.message }));
+const sendError = (req, res, err) => {
+  if (err.name === 'CastError') return res.status(NOT_FOUND).send({ message: 'Карточка с указанным _id не найдена' });
+  if (err.name === 'ValidationError') return res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при создании карточки' });
+  return res.status(SERVER_ERROR).send({ message: err.message });
 };
 
-createCard = (req, res) => {
-  console.log(req.user._id);
+// Получить список карточек
+const getCards = (req, res) => Card.find({})
+  .then((cards) => res.status(OK).send(cards))
+  .catch((err) => res.status(SERVER_ERROR).send({ message: err.message }));
+
+// Создать новую карточку
+const createCard = (req, res) => {
   const { name, link } = req.body;
 
   return Card.create({ name, link, owner: req.user._id })
-    .then(card => res.status(200).send({ data: card }))
-    .catch(err => res.status(500).send({ message: err.message }));
+    .then((card) => res.status(OK).send(card))
+    .catch((err) => sendError(req, res, err));
 };
 
-deleteCard = (req, res) => {
-  console.log(req.user._id);
+// Удалить карточку
+const deleteCard = (req, res) => {
+  const { cardId } = req.params;
 
-  const { id } = req.params;
+  return Card.findByIdAndDelete(cardId)
+    .then(() => res.status(OK).send({ message: 'Карточка успешно удалена' }))
+    .catch((err) => sendError(req, res, err));
+};
 
-  return Card.findByIdAndDelete(id)
-    .then(card => {
-      if (card) {
-        return res.status(200).send({ data: card })
-      }
-      return res.status(404).send({ message: err.message }) //'Карточка с таким ID отсутсвует'
-    })
-    .catch(err => res.status(500).send({ message: err.message }));
+// Поставить лайк карточке
+const likeCard = (req, res) => {
+  const { cardId } = req.params;
+
+  return Card.findByIdAndUpdate(
+    cardId,
+    { $addToSet: { likes: req.user._id } }, // добавить _id в массив, если его там нет
+    { new: true },
+  )
+    .then((card) => res.status(OK).send(card))
+    .catch((err) => sendError(req, res, err));
+};
+
+// Убрать лайк карточки
+const unlikeCard = (req, res) => {
+  const { cardId } = req.params;
+
+  return Card.findByIdAndUpdate(
+    cardId,
+    { $pull: { likes: req.user._id } }, // убрать _id из массива
+    { new: true },
+  )
+    .then((card) => res.status(OK).send(card))
+    .catch((err) => sendError(req, res, err));
 };
 
 module.exports = {
   getCards,
   createCard,
-  deleteCard
-}
+  deleteCard,
+  likeCard,
+  unlikeCard,
+};
