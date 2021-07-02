@@ -32,8 +32,17 @@ const createCard = (req, res) => {
 const deleteCard = (req, res) => {
   const { cardId } = req.params;
 
-  return Card.findByIdAndDelete(cardId)
-    .then((card) => checkCardIfExists(card, res))
+  return Card.findById(cardId)
+    .then((card) => {
+      if (!card) return res.status(NOT_FOUND).send({ message: 'Карточка с указанным _id не найдена' });
+
+      const ifOwner = JSON.stringify(req.user._id) === JSON.stringify(card.owner);
+      // return res.send([ifOwner, JSON.stringify(req.user._id), JSON.stringify(card.owner)]);
+
+      if (!ifOwner) return res.status(403).send({message: 'У вас нет прав удалять эту карточку' });
+      return card.remove()
+        .then(() => res.status(OK).send({ message: 'карточка успешно удалена' }));
+    })
     .catch((err) => sendError(req, res, err));
 };
 

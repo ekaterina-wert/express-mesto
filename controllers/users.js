@@ -1,4 +1,8 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 const User = require('../models/user');
+
 const {
   OK, BAD_REQUEST, NOT_FOUND, SERVER_ERROR,
 } = require('../utils/constants');
@@ -9,13 +13,36 @@ const sendError = (req, res, err) => {
   return res.status(SERVER_ERROR).send({ message: err.message });
 };
 
+const login = (req, res) => {
+  const { email, password } = req.body;
+
+  return User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user._id }, //пейлоуд токена
+        'key',
+        { expiresIn: '7d' }
+      );
+      // if (!user) return Promise.reject(new Error('Юзер с таким имейлом отсутствует'));
+      // res.send({token})
+
+      res.cookie('jwt', token, {
+        maxAge: 3600000 * 24 * 7,
+        httpOnly: true,
+        sameSite: true,
+      })
+        .end();
+    })
+    .catch((err) => sendError(req, res, err));
+};
+
 // Получить список пользователей
 const getUsers = (req, res) => User.find({})
   .then((users) => res.status(OK).send(users))
   .catch((err) => res.status(SERVER_ERROR).send({ message: err.message }));
 
 // Получить пользователя по id
-const getUser = (req, res) => {
+const getAnyUser = (req, res) => {
   const { userId } = req.params;
 
   return User.findById(userId)
@@ -26,11 +53,24 @@ const getUser = (req, res) => {
     .catch((err) => sendError(req, res, err));
 };
 
+// Перейти на страницу заркгистрированного пользователя
+const getUser = (req, res) => {
+  return User.findById(req.user._id)
+    .then((user) => res.status(OK).send({ user }))
+    .catch((err) => sendError(req, res, err));
+};
+
 // Создать нового пользователя
 const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
 
-  return User.create({ name, about, avatar })
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
+
     .then((user) => res.status(OK).send({ user }))
     .catch((err) => sendError(req, res, err));
 };
@@ -70,7 +110,9 @@ const updateUserAvatar = (req, res) => {
 };
 
 module.exports = {
+  login,
   getUsers,
+  getAnyUser,
   getUser,
   createUser,
   updateUser,
