@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const NotFoundError = require('../errors/not-found-error');
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -39,13 +40,15 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-userSchema.statics.findUserByCredentials = function(email, password) {
+userSchema.statics.findUserByCredentials = function checkUser(email, password) {
   return this.findOne({ email }).select('+password')
     .then((user) => {
-      if (!user) return Promise.reject(new Error('email is not valid'));
+      if (!user) throw new NotFoundError('Юзер с таким имейлом отсутствует');
+      // return Promise.reject(new NotFoundError('Юзер с таким имейлом отсутствует'));
       return bcrypt.compare(password, user.password)
         .then((matched) => {
-          if (!matched) return Promise.reject(new Error('password is not valid'));
+          if (!matched) throw new NotFoundError('Введен неверный пароль');
+          // return Promise.reject(new NotFoundError('Введен неверный пароль'));
           return user;
         });
     });

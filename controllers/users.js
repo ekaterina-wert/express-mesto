@@ -2,66 +2,58 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const User = require('../models/user');
+const NotFoundError = require('../errors/not-found-error');
 
-const {
-  OK, BAD_REQUEST, NOT_FOUND, SERVER_ERROR,
-} = require('../utils/constants');
+const { OK } = require('../utils/constants');
 
-const sendError = (req, res, err) => {
-  if (err.name === 'CastError') return res.status(BAD_REQUEST).send({ message: 'Передан некорректный id пользователя' });
-  if (err.name === 'ValidationError') return res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при создании пользователя' });
-  return res.status(SERVER_ERROR).send({ message: err.message });
-};
-
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      const token = jwt.sign(
-        { _id: user._id }, //пейлоуд токена
-        'key',
-        { expiresIn: '7d' }
-      );
-      // if (!user) return Promise.reject(new Error('Юзер с таким имейлом отсутствует'));
-      // res.send({token})
+      if (!user) throw new NotFoundError('Юзер с таким имейлом отсутствует');
+      {
+        const token = jwt.sign(
+          { _id: user._id }, // пейлоуд токена
+          'key',
+          { expiresIn: '7d' },
+        );
 
-      res.cookie('jwt', token, {
-        maxAge: 3600000 * 24 * 7,
-        httpOnly: true,
-        sameSite: true,
-      })
-        .end();
+        res.cookie('jwt', token, {
+          maxAge: 3600000 * 24 * 7,
+          httpOnly: true,
+          sameSite: true,
+        })
+          .end();
+      }
     })
-    .catch((err) => sendError(req, res, err));
+    .catch(next);
 };
 
 // Получить список пользователей
-const getUsers = (req, res) => User.find({})
+const getUsers = (req, res, next) => User.find({})
   .then((users) => res.status(OK).send(users))
-  .catch((err) => res.status(SERVER_ERROR).send({ message: err.message }));
+  .catch(next);
 
 // Получить пользователя по id
-const getAnyUser = (req, res) => {
+const getAnyUser = (req, res, next) => {
   const { userId } = req.params;
 
   return User.findById(userId)
     .then((user) => {
       if (user) res.status(OK).send(user);
-      res.status(NOT_FOUND).send({ message: 'Пользователь с указанным _id не найден' });
+      throw new NotFoundError('Пользователь с указанным _id не найден');
     })
-    .catch((err) => sendError(req, res, err));
+    .catch(next);
 };
 
 // Перейти на страницу заркгистрированного пользователя
-const getUser = (req, res) => {
-  return User.findById(req.user._id)
-    .then((user) => res.status(OK).send({ user }))
-    .catch((err) => sendError(req, res, err));
-};
+const getUser = (req, res, next) => User.findById(req.user._id)
+  .then((user) => res.status(OK).send({ user }))
+  .catch(next);
 
 // Создать нового пользователя
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
@@ -72,11 +64,11 @@ const createUser = (req, res) => {
     }))
 
     .then((user) => res.status(OK).send({ user }))
-    .catch((err) => sendError(req, res, err));
+    .catch(next);
 };
 
 // Изменить информацию о пользователе
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const { name, about } = req.body;
 
   return User.findByIdAndUpdate(
@@ -89,11 +81,11 @@ const updateUser = (req, res) => {
     },
   )
     .then((user) => res.status(OK).send({ user }))
-    .catch((err) => sendError(req, res, err));
+    .catch(next);
 };
 
 // Изменить аватар пользователя
-const updateUserAvatar = (req, res) => {
+const updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
   return User.findByIdAndUpdate(
@@ -106,7 +98,7 @@ const updateUserAvatar = (req, res) => {
     },
   )
     .then((user) => res.status(OK).send({ user }))
-    .catch((err) => sendError(req, res, err));
+    .catch(next);
 };
 
 module.exports = {
