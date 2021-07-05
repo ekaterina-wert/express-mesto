@@ -2,6 +2,7 @@ const Card = require('../models/card');
 const { OK } = require('../utils/constants');
 const NotFoundError = require('../errors/not-found-error');
 const ForbiddenError = require('../errors/forbidden-error');
+const BadRequestError = require('../errors/bad-request-error');
 
 const checkCardIfExists = (card, res) => {
   if (card) res.status(OK).send(card);
@@ -18,8 +19,11 @@ const createCard = (req, res, next) => {
   const { name, link } = req.body;
 
   return Card.create({ name, link, owner: req.user._id })
-    .then((card) => res.status(OK).send(card))
-    .catch(next);
+    .then((card) => checkCardIfExists(card))
+    .catch((err) => {
+      if (err.name === 'ValidationError') next(new BadRequestError('Переданы некорректные данные при создании карточки'));
+      next(err);
+    });
 };
 
 // Удалить карточку

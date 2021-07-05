@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 
 const User = require('../models/user');
 const NotFoundError = require('../errors/not-found-error');
+const ConflictError = require('../errors/conflict-error');
+const BadRequestError = require('../errors/bad-request-error');
 
 const { OK } = require('../utils/constants');
 
@@ -13,23 +15,23 @@ const login = (req, res, next) => {
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      if (!user) throw new NotFoundError('Юзер с таким имейлом отсутствует');
-      {
-        const token = jwt.sign(
-          { _id: user._id }, // пейлоуд токена
-          JWT_SECRET,
-          { expiresIn: '7d' },
-        );
+      const token = jwt.sign(
+        { _id: user._id }, // пейлоуд токена
+        JWT_SECRET,
+        { expiresIn: '7d' },
+      );
 
-        res.cookie('jwt', token, {
-          maxAge: 3600000 * 24 * 7,
-          httpOnly: true,
-          sameSite: true,
-        })
-          .end();
-      }
+      res.cookie('jwt', token, {
+        maxAge: 3600000 * 24 * 7,
+        httpOnly: true,
+        sameSite: true,
+      })
+        .end();
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') next(new BadRequestError('Переданы некорректные данные'));
+      next(err);
+    });
 };
 
 // Получить список пользователей
@@ -49,7 +51,7 @@ const getAnyUser = (req, res, next) => {
     .catch(next);
 };
 
-// Перейти на страницу заркгистрированного пользователя
+// Перейти на страницу зарегистрированного пользователя
 const getUser = (req, res, next) => User.findById(req.user._id)
   .then((user) => res.status(OK).send({ user }))
   .catch(next);
@@ -65,14 +67,17 @@ const createUser = (req, res, next) => {
       name, about, avatar, email, password: hash,
     }))
 
-    .then((user) => { return res.status(OK).send({
+    .then((user) => res.status(OK).send({
       name: user.name,
       about: user.about,
       avatar: user.avatar,
       email,
+    }))
+    .catch((err) => {
+      if (err.name === 'MongoError' && err.code === 11000) next(new ConflictError('Юзер с таким имейлом уже существует'));
+      if (err.name === 'ValidationError') next(new BadRequestError('Переданы некорректные данные при создании пользователя'));
+      next(err);
     });
-    })
-    .catch(next);
 };
 
 // Изменить информацию о пользователе
@@ -89,7 +94,10 @@ const updateUser = (req, res, next) => {
     },
   )
     .then((user) => res.status(OK).send({ user }))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') next(new BadRequestError('Переданы некорректные данные'));
+      next(err);
+    });
 };
 
 // Изменить аватар пользователя
@@ -106,7 +114,10 @@ const updateUserAvatar = (req, res, next) => {
     },
   )
     .then((user) => res.status(OK).send({ user }))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') next(new BadRequestError('Переданы некорректные данные'));
+      next(err);
+    });
 };
 
 module.exports = {

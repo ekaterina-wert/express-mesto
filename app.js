@@ -9,9 +9,6 @@ const auth = require('./middlewares/auth');
 const NotFoundError = require('./errors/not-found-error');
 const {
   MONGO_URL,
-  BAD_REQUEST,
-  NOT_FOUND,
-  CONFLICT,
   SERVER_ERROR,
 } = require('./utils/constants');
 
@@ -56,9 +53,6 @@ app.use((err) => {
 // мидлвэр для централизованной обработки ошибок
 app.use((err, req, res, next) => {
   const { statusCode = SERVER_ERROR, message } = err;
-  if (err.name === 'MongoError' && err.code === 11000) return res.status(CONFLICT).send({ message: 'Юзер с таким имейлом уже существует' });
-  if (err.name === 'CastError') return res.status(BAD_REQUEST).send({ message: 'Передан некорректный id пользователя' });
-  if (err.name === 'ValidationError') return res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные' });
 
   res.status(statusCode).send({
     message: statusCode === SERVER_ERROR
