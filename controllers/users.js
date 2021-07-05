@@ -6,6 +6,8 @@ const NotFoundError = require('../errors/not-found-error');
 
 const { OK } = require('../utils/constants');
 
+const { JWT_SECRET } = process.env;
+
 const login = (req, res, next) => {
   const { email, password } = req.body;
 
@@ -15,7 +17,7 @@ const login = (req, res, next) => {
       {
         const token = jwt.sign(
           { _id: user._id }, // пейлоуд токена
-          'key',
+          JWT_SECRET,
           { expiresIn: '7d' },
         );
 
@@ -63,7 +65,13 @@ const createUser = (req, res, next) => {
       name, about, avatar, email, password: hash,
     }))
 
-    .then((user) => res.status(OK).send({ user }))
+    .then((user) => { return res.status(OK).send({
+      name: user.name,
+      about: user.about,
+      avatar: user.avatar,
+      email,
+    });
+    })
     .catch(next);
 };
 

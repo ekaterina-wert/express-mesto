@@ -1,23 +1,24 @@
 const jwt = require('jsonwebtoken');
-const TokenError = require('../errors/token-error');
+const TokenError = require('../errors/unauthorized-error');
 const ForbiddenError = require('../errors/forbidden-error');
 
+const { JWT_SECRET } = process.env;
+
 module.exports = function auth(req, res, next) {
-  const { authorization } = req.headers;
-  if (!authorization || !authorization.startsWith('Bearer ')) {
+  const token = req.cookies.jwt;
+  if (!token) {
     throw new ForbiddenError('Необходима авторизация пользователя');
   }
-  const token = authorization.replace('Bearer ', '');
   let payload;
 
   try {
-    // попытаемся верифицировать токен
-    payload = jwt.verify(token, 'key');
+    // верификация токена
+    payload = jwt.verify(token, JWT_SECRET);
   } catch (err) {
     throw new TokenError('Передан некорректный токен');
   }
 
-  req.user = payload; // записываем пейлоуд в объект запроса
+  req.user = payload; // пейлоуд в объект запроса
 
   next();
 };

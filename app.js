@@ -1,10 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
+require('dotenv').config();
 // const path = require('path');
 // const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const { errors } = require('celebrate');
 const auth = require('./middlewares/auth');
+const NotFoundError = require('./errors/not-found-error');
 const {
   MONGO_URL,
   BAD_REQUEST,
@@ -29,8 +31,8 @@ mongoose.connect(MONGO_URL, {
 // app.use(express,static(path.join(__dirname, 'public')));
 // app.use(routes);
 
-app.use(express.json()); // Used to parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // роуты, не требующие авторизации
 app.use('/', require('./routes/auth'));
@@ -47,10 +49,11 @@ app.use('/cards', require('./routes/cards'));
 app.use(errors());
 
 // Handling 404
-app.use((req, res) => res.status(NOT_FOUND).send({ message: 'Такой страницы не существует' }));
+app.use((err) => {
+  if (err) throw new NotFoundError('Такой страницы не существует');
+});
 
 // мидлвэр для централизованной обработки ошибок
-
 app.use((err, req, res, next) => {
   const { statusCode = SERVER_ERROR, message } = err;
   if (err.name === 'MongoError' && err.code === 11000) return res.status(CONFLICT).send({ message: 'Юзер с таким имейлом уже существует' });
