@@ -8,7 +8,7 @@ const BadRequestError = require('../errors/bad-request-error');
 
 const { OK } = require('../utils/constants');
 
-const { JWT_SECRET } = process.env;
+const { JWT_SECRET = 'secret-key' } = process.env;
 
 const login = (req, res, next) => {
   const { email, password } = req.body;

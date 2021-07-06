@@ -6,7 +6,9 @@ const BadRequestError = require('../errors/bad-request-error');
 
 const checkCardIfExists = (card, res) => {
   if (card) res.status(OK).send(card);
-  throw new NotFoundError('Карточка с указанным _id не найдена');
+  else {
+    throw new NotFoundError('Карточка с указанным _id не найдена');
+  }
 };
 
 // Получить список карточек
@@ -19,7 +21,7 @@ const createCard = (req, res, next) => {
   const { name, link } = req.body;
 
   return Card.create({ name, link, owner: req.user._id })
-    .then((card) => checkCardIfExists(card))
+    .then((card) => res.status(OK).send(card))
     .catch((err) => {
       if (err.name === 'ValidationError') next(new BadRequestError('Переданы некорректные данные при создании карточки'));
       next(err);

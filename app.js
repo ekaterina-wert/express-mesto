@@ -6,6 +6,7 @@ require('dotenv').config();
 const cookieParser = require('cookie-parser');
 const { errors } = require('celebrate');
 const auth = require('./middlewares/auth');
+const handleErrors = require('./middlewares/handle-errors');
 const NotFoundError = require('./errors/not-found-error');
 const {
   MONGO_URL,
@@ -51,15 +52,6 @@ app.use((err) => {
 });
 
 // мидлвэр для централизованной обработки ошибок
-app.use((err, req, res, next) => {
-  const { statusCode = SERVER_ERROR, message } = err;
-
-  res.status(statusCode).send({
-    message: statusCode === SERVER_ERROR
-      ? 'На сервере произошла ошибка'
-      : message,
-  });
-  return next();
-});
+app.use(handleErrors);
 
 app.listen(PORT);
