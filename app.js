@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
+const helmet = require('helmet');
 // const path = require('path');
 // const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
@@ -8,15 +9,13 @@ const { errors } = require('celebrate');
 const auth = require('./middlewares/auth');
 const handleErrors = require('./middlewares/handle-errors');
 const NotFoundError = require('./errors/not-found-error');
-const {
-  MONGO_URL,
-  SERVER_ERROR,
-} = require('./utils/constants');
+const { MONGO_URL } = require('./utils/constants');
 
 const { PORT = 3000 } = process.env;
 
 const app = express();
 
+app.use(helmet());
 app.use(cookieParser());
 
 mongoose.connect(MONGO_URL, {
