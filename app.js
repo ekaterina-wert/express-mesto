@@ -12,7 +12,7 @@ const handleErrors = require('./middlewares/handle-errors');
 const NotFoundError = require('./errors/not-found-error');
 const { MONGO_URL } = require('./utils/constants');
 
-const { PORT = 80 } = process.env;
+const { PORT = 3000 } = process.env;
 
 const app = express();
 
