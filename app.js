@@ -7,11 +7,12 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const { errors } = require('celebrate');
 const auth = require('./middlewares/auth');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
 const handleErrors = require('./middlewares/handle-errors');
 const NotFoundError = require('./errors/not-found-error');
 const { MONGO_URL } = require('./utils/constants');
 
-const { PORT = 3000 } = process.env;
+const { PORT = 80 } = process.env;
 
 const app = express();
 
@@ -31,6 +32,8 @@ mongoose.connect(MONGO_URL, {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(requestLogger); // подключаем логгер запросов до обработчиков роутов
+
 // роуты, не требующие авторизации
 app.use('/', require('./routes/auth'));
 
@@ -41,6 +44,8 @@ app.use(auth);
 app.use('/users', require('./routes/users'));
 
 app.use('/cards', require('./routes/cards'));
+
+app.use(errorLogger); // подключаем логгер ошибок после роутов и до обработчиков ошибок
 
 // Обработка ошибок валидатора celebrate
 app.use(errors());
